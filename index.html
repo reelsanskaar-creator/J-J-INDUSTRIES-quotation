@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J&J Industries - Enterprise Quotation Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF & HTML Canvas Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            body * { visibility: hidden; }
+            #printable-quotation, #printable-quotation * { visibility: visible; }
+            #printable-quotation { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 12mm; border: none !important; }
+            .no-print { display: none !important; }
+        }
+        .editable-header:hover {
+            outline: 1px dashed rgba(249, 115, 22, 0.6);
+            background-color: rgba(249, 115, 22, 0.05);
+            cursor: pointer;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col antialiased selection:bg-orange-500 selection:text-white">
+
+    <header class="bg-slate-900/90 backdrop-blur-md text-white shadow-2xl border-b border-orange-500/40 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3.5">
+                <div class="h-11 w-11 rounded-xl bg-orange-500 flex items-center justify-center font-black text-white text-xl shadow-lg border border-orange-400">
+                    J&J
+                </div>
+                <div>
+                    <h1 id="app-company-title" class="text-base font-black tracking-wider editable-header px-1.5 py-0.5 rounded text-white" contenteditable="true" title="Click to edit company title">J&J INDUSTRIES</h1>
+                    <p id="app-company-gst" class="text-[10px] text-slate-400 editable-header px-1.5 py-0.5 rounded font-medium" contenteditable="true" title="Click to edit GSTIN">GSTIN: 24BIKPJ7530F1ZD | Municipal & Heavy Machinery Enterprise Portal</p>
+                </div>
+            </div>
+            
+            <nav class="flex flex-wrap gap-1.5 text-xs font-semibold">
+                <button onclick="switchTab('dashboard')" class="tab-btn px-3.5 py-2 rounded-xl bg-orange-500 text-white transition shadow-md shadow-orange-500/20">Dashboard</button>
+                <button onclick="switchTab('quotation')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Quotation Builder</button>
+                <button onclick="switchTab('packages')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Tiered Packages</button>
+                <button onclick="switchTab('vehicles')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Vehicle Master (29)</button>
+                <button onclick="switchTab('parts')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Spare Parts Catalog (60+)</button>
+                <button onclick="switchTab('customers')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Customer Master</button>
+                <button onclick="switchTab('sync')" class="tab-btn px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition border border-slate-700/50">Google Script Link</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 overflow-y-auto space-y-6">
+
+        <section id="tab-dashboard" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="bg-slate-900/80 backdrop-blur p-5 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Quotations</p>
+                        <h3 id="stat-total-q" class="text-3xl font-black text-white mt-1">0</h3>
+                    </div>
+                    <div class="bg-blue-500/10 text-blue-400 p-3 rounded-2xl text-xl font-bold border border-blue-500/20">📄</div>
+                </div>
+                <div class="bg-slate-900/80 backdrop-blur p-5 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Approved Tenders</p>
+                        <h3 id="stat-approved" class="text-3xl font-black text-emerald-400 mt-1">0</h3>
+                    </div>
+                    <div class="bg-emerald-500/10 text-emerald-400 p-3 rounded-2xl text-xl font-bold border border-emerald-500/20">✅</div>
+                </div>
+                <div class="bg-slate-900/80 backdrop-blur p-5 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vehicles Master</p>
+                        <h3 id="stat-vehicles" class="text-3xl font-black text-orange-400 mt-1">29</h3>
+                    </div>
+                    <div class="bg-orange-500/10 text-orange-400 p-3 rounded-2xl text-xl font-bold border border-orange-500/20">🚛</div>
+                </div>
+                <div class="bg-slate-900/80 backdrop-blur p-5 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Spare Parts Catalog</p>
+                        <h3 id="stat-parts" class="text-3xl font-black text-purple-400 mt-1">60+</h3>
+                    </div>
+                    <div class="bg-purple-500/10 text-purple-400 p-3 rounded-2xl text-xl font-bold border border-purple-500/20">⚙️</div>
+                </div>
+                <div class="bg-slate-900/80 backdrop-blur p-5 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Customer Master</p>
+                        <h3 id="stat-customers" class="text-3xl font-black text-cyan-400 mt-1">0</h3>
+                    </div>
+                    <div class="bg-cyan-500/10 text-cyan-400 p-3 rounded-2xl text-xl font-bold border border-cyan-500/20">🏢</div>
+                </div>
+            </div>
+
+            <!-- Connection status banner -->
+            <div id="connection-banner" class="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <span id="conn-indicator-dot" class="h-3 w-3 rounded-full bg-amber-500 animate-pulse"></span>
+                    <div>
+                        <p class="text-xs font-bold text-white" id="conn-status-title">Google Web App Backend Connection</p>
+                        <p class="text-[11px] text-slate-400" id="conn-status-desc">Local Mode Active. Configure your deployed Google Apps Script Web App URL to sync with Google Sheets.</p>
+                    </div>
+                </div>
+                <button onclick="switchTab('sync')" class="bg-slate-800 hover:bg-slate-700 text-orange-400 border border-orange-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition">⚙️ Configure Web App URL</button>
+            </div>
+
+            <div class="bg-slate-900/80 rounded-3xl shadow-xl border border-slate-800 p-6 space-y-4">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white">Recent Quotations & Active Tenders</h2>
+                        <p class="text-xs text-slate-400">View and manage quotations stored locally or synchronized with Google Sheets.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="switchTab('packages')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition">📦 Tiered Packages</button>
+                        <button onclick="switchTab('quotation')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition">+ Create New Quotation</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider">
+                                <th class="p-3.5 rounded-l-xl">Quotation No</th>
+                                <th class="p-3.5">Customer Name</th>
+                                <th class="p-3.5">Type</th>
+                                <th class="p-3.5">Date</th>
+                                <th class="p-3.5">Taxable (₹)</th>
+                                <th class="p-3.5">Grand Total (₹)</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5 rounded-r-xl text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotations-table-body" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-packages" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="border-b border-slate-800 pb-4">
+                    <h2 class="text-xl font-extrabold text-white">Tiered Municipal Quotation Packages</h2>
+                    <p class="text-xs text-slate-400 mt-1">Select a pre-configured package tier to automatically populate the builder with multi-item tenders.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4 hover:border-orange-500/60 transition group">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-blue-500/20">Tier 1: Basic</span>
+                                <span class="text-xs text-slate-400 font-mono">1 Vehicle + 1 Spares</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white group-hover:text-blue-400 transition">Compact Suction Unit Package</h3>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">Ideal for small municipalities requiring a single suction machine and essential replacement vacuum pump.</p>
+                            <ul class="mt-4 space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2">✅ Truck Mounted Sewer Suction Machine 3000L</li>
+                                <li class="flex items-center gap-2">✅ Vacuum Pump 3000L</li>
+                                <li class="flex items-center gap-2">✅ Suction Hose 4inch</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-base font-black text-white mb-3">Estimated: ₹9,65,000 + GST</div>
+                            <button onclick="loadPackageTier(1)" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-xs font-semibold shadow transition">Load Tier 1 into Builder</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/80 border-2 border-orange-500/80 rounded-2xl p-6 flex flex-col justify-between space-y-4 relative shadow-2xl">
+                        <div class="absolute -top-3 right-6 bg-orange-500 text-white text-[10px] font-bold px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md">Most Popular</div>
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="bg-orange-500/10 text-orange-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-orange-500/20">Tier 2: Standard</span>
+                                <span class="text-xs text-slate-400 font-mono">2 Vehicles + 2 Parts + Service</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white">Full Municipal Drainage Package</h3>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">Designed for municipal corporations requiring suction, high-pressure jetting, spare kits, and operational AMC support.</p>
+                            <ul class="mt-4 space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2">✅ Truck Mounted Sewer Suction Machine 4000L</li>
+                                <li class="flex items-center gap-2">✅ Truck Mounted Sewer Jetting Machine 4000L</li>
+                                <li class="flex items-center gap-2">✅ HP Pump 150 LPM & Root Cutter Nozzle</li>
+                                <li class="flex items-center gap-2">✅ 1 Year Annual Maintenance Contract (AMC)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-base font-black text-white mb-3">Estimated: ₹23,20,000 + GST</div>
+                            <button onclick="loadPackageTier(2)" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-xs font-semibold shadow-lg shadow-orange-500/30 transition">Load Tier 2 into Builder</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/80 border border-purple-500/50 rounded-2xl p-6 flex flex-col justify-between space-y-4 hover:border-purple-500 transition group">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="bg-purple-500/10 text-purple-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-500/20">Tier 3: Turnkey Mega</span>
+                                <span class="text-xs text-slate-400 font-mono">3 Vehicles + Full Parts</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white group-hover:text-purple-400 transition">Turnkey Mega Municipal Fleet</h3>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">Mega municipal tender covering combined suction-jetting units, aerial platform sky lifts, complete spares inventory, and servicing.</p>
+                            <ul class="mt-4 space-y-2.5 text-xs text-slate-300">
+                                <li class="flex items-center gap-2">✅ Suction Cum Jetting Machine 4000L</li>
+                                <li class="flex items-center gap-2">✅ Hydraulic Sky Lift 14m Artic & Telescopic</li>
+                                <li class="flex items-center gap-2">✅ Vacuum Pump 6000L & HP Nozzle Kit</li>
+                                <li class="flex items-center gap-2">✅ Multi-Year AMC & Fleet Servicing</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="text-base font-black text-white mb-3">Estimated: ₹37,00,000 + GST</div>
+                            <button onclick="loadPackageTier(3)" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl text-xs font-semibold shadow transition">Load Tier 3 into Builder</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-quotation" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Quotation Builder</h2>
+                        <p class="text-xs text-slate-400 mt-1">Configure quotation details, manage line items, taxes, discounts, manual quotation types, and sync to Google Sheets.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="saveQuotationToCloud()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition">☁️ Save to Google Sheets</button>
+                        <button onclick="previewQuotation()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition border border-slate-700">Preview</button>
+                        <button onclick="downloadPDF()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow transition">Download PDF</button>
+                        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition">Print</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Quotation Mode</label>
+                        <select id="q-no-mode" onchange="toggleQNoMode()" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-medium focus:outline-none focus:border-orange-500">
+                            <option value="auto">Automatic Counter</option>
+                            <option value="manual">Manual Entry</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Quotation Number</label>
+                        <input type="text" id="q-no" value="JJ/Q/2026-27/1001" readonly class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-950 text-slate-300 font-mono focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Date</label>
+                        <input type="date" id="q-date" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-mono focus:outline-none focus:border-orange-500">
+                    </div>
+
+                    <!-- Quotation Type with Preset Dropdown + Manual Add -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Quotation Type</label>
+                            <button onclick="toggleQuotationTypeMode()" id="q-type-toggle-btn" class="text-[10px] text-orange-400 hover:underline font-semibold">+ Manual Add</button>
+                        </div>
+                        
+                        <div id="q-type-select-container">
+                            <select id="q-type" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-medium focus:outline-none focus:border-orange-500">
+                                <option value="Municipal Tender">Municipal Tender</option>
+                                <option value="Heavy Machinery Supply">Heavy Machinery Supply</option>
+                                <option value="Spare Parts & Repair">Spare Parts & Repair</option>
+                                <option value="Turnkey AMC Contract">Turnkey AMC Contract</option>
+                                <option value="Emergency Roadside Repair">Emergency Roadside Repair</option>
+                                <option value="Rate Contract Tender">Rate Contract Tender</option>
+                            </select>
+                        </div>
+
+                        <div id="q-type-manual-container" class="hidden flex gap-1.5">
+                            <input type="text" id="q-type-manual-input" placeholder="Type custom quotation type..." class="flex-1 p-2.5 rounded-xl border border-orange-500/60 text-xs bg-slate-900 text-white focus:outline-none">
+                            <button onclick="addCustomQuotationType()" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-bold">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-semibold text-slate-300">Customer / Municipal Body</label>
+                            <button onclick="switchTab('customers')" class="text-[11px] text-orange-400 hover:underline font-semibold">+ Add New Customer</button>
+                        </div>
+                        <select id="q-customer" onchange="onCustomerSelect()" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-medium focus:outline-none focus:border-orange-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Commercial Payment Terms</label>
+                        <input type="text" id="q-terms" value="50% Advance along with PO, 50% Against Delivery & Inspection" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+
+                <div id="section-table-1" class="space-y-3 pt-2 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <h3 id="table1-header-title" class="font-bold text-white text-xs uppercase tracking-wider editable-header px-2 py-1 rounded" contenteditable="true" title="Click to edit header">1. Vehicles & Heavy Machinery (HSN 8705)</h3>
+                            <button onclick="removeSection('section-table-1')" class="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg font-semibold transition">🗑️ Delete Section</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="addManualVehicleRow()" class="text-xs bg-slate-800 hover:bg-slate-700 text-orange-400 border border-orange-500/40 px-3 py-1.5 rounded-lg font-medium transition">+ Custom Item</button>
+                            <button onclick="openVehiclePickerModal()" class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-bold shadow transition">🔍 Pick from Vehicle Master (29)</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 text-[10px] uppercase tracking-wider">
+                                    <th class="p-3 rounded-l-xl">Vehicle Description / Name</th>
+                                    <th class="p-3">HSN Code</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Unit Price (₹)</th>
+                                    <th class="p-3">Total (₹)</th>
+                                    <th class="p-3 rounded-r-xl text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehicle-rows" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="section-table-2" class="space-y-3 pt-2 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <h3 id="table2-header-title" class="font-bold text-white text-xs uppercase tracking-wider editable-header px-2 py-1 rounded" contenteditable="true" title="Click to edit header">2. Spare Parts & Replacement Accessories</h3>
+                            <button onclick="removeSection('section-table-2')" class="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg font-semibold transition">🗑️ Delete Section</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="addManualPartRow()" class="text-xs bg-slate-800 hover:bg-slate-700 text-orange-400 border border-orange-500/40 px-3 py-1.5 rounded-lg font-medium transition">+ Custom Part</button>
+                            <button onclick="openPartPickerModal()" class="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg font-bold shadow transition">🔍 Pick from Spares Catalog (60+)</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 text-[10px] uppercase tracking-wider">
+                                    <th class="p-3 rounded-l-xl">Spare Part Name</th>
+                                    <th class="p-3">HSN Code</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Unit Price (₹)</th>
+                                    <th class="p-3">Total (₹)</th>
+                                    <th class="p-3 rounded-r-xl text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="part-rows" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="section-table-3" class="space-y-3 pt-2 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <h3 id="table3-header-title" class="font-bold text-white text-xs uppercase tracking-wider editable-header px-2 py-1 rounded" contenteditable="true" title="Click to edit header">3. Service, Repairs & Annual Maintenance (AMC)</h3>
+                            <button onclick="removeSection('section-table-3')" class="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg font-semibold transition">🗑️ Delete Section</button>
+                        </div>
+                        <button onclick="addLabourRow()" class="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg font-medium transition">+ Add Service Item</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 text-[10px] uppercase tracking-wider">
+                                    <th class="p-3 rounded-l-xl">Service Description</th>
+                                    <th class="p-3">HSN Code</th>
+                                    <th class="p-3">Units</th>
+                                    <th class="p-3">Rate (₹)</th>
+                                    <th class="p-3">Total (₹)</th>
+                                    <th class="p-3 rounded-r-xl text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="labour-rows" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-800">
+                    <div class="space-y-4">
+                        <div id="field-discount-wrapper" class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-semibold text-slate-300">Discount Amount (₹)</label>
+                                <button onclick="toggleField('field-discount-wrapper', 'calc-discount')" class="text-[10px] text-red-400 hover:underline font-semibold">🗑️ Remove Discount</button>
+                            </div>
+                            <input type="number" id="calc-discount" value="0" oninput="calculateTotals()" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-mono focus:outline-none focus:border-orange-500">
+                        </div>
+
+                        <div id="field-packing-wrapper" class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-semibold text-slate-300">Packing & Forwarding Charges (₹)</label>
+                                <button onclick="toggleField('field-packing-wrapper', 'calc-packing')" class="text-[10px] text-red-400 hover:underline font-semibold">🗑️ Remove Packing</button>
+                            </div>
+                            <input type="number" id="calc-packing" value="5000" oninput="calculateTotals()" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-mono focus:outline-none focus:border-orange-500">
+                        </div>
+
+                        <div id="field-transport-wrapper" class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-semibold text-slate-300">Transportation & Freight Charges (₹)</label>
+                                <button onclick="toggleField('field-transport-wrapper', 'calc-transport')" class="text-[10px] text-red-400 hover:underline font-semibold">🗑️ Remove Transport</button>
+                            </div>
+                            <input type="number" id="calc-transport" value="12000" oninput="calculateTotals()" class="w-full p-3 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-mono focus:outline-none focus:border-orange-500">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 text-xs shadow-inner">
+                        <div class="flex justify-between"><span class="text-slate-400">Items Sub Total:</span> <span id="lbl-subtotal" class="font-semibold text-white font-mono">₹0.00</span></div>
+                        <div id="row-lbl-discount" class="flex justify-between"><span class="text-slate-400">Discount:</span> <span id="lbl-discount" class="font-semibold text-red-400 font-mono">-₹0.00</span></div>
+                        <div id="row-lbl-packtrans" class="flex justify-between"><span class="text-slate-400">Freight & Logistics:</span> <span id="lbl-packtrans" class="font-semibold text-white font-mono">₹17,000.00</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Taxable Sub Total:</span> <span id="lbl-taxable" class="font-semibold text-white font-mono">₹0.00</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">GST (18%):</span> <span id="lbl-gst" class="font-semibold text-white font-mono">₹0.00</span></div>
+                        <div class="border-t border-slate-800 pt-3 flex justify-between text-base font-black text-white"><span>Grand Total:</span> <span id="lbl-grandtotal" class="text-orange-400 font-mono">₹0.00</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-vehicles" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Vehicle & Heavy Machinery Master (29 Models)</h2>
+                        <p class="text-xs text-slate-400 mt-1">Full database of suction machines, jetting units, sky lifts, desilting machinery, and road sweepers.</p>
+                    </div>
+                    <div class="w-full sm:w-72">
+                        <input type="text" id="vehicle-master-search" oninput="filterVehicleMasterTable()" placeholder="🔍 Search vehicle name or HSN..." class="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
+                                <th class="p-3.5 rounded-l-xl">ID</th>
+                                <th class="p-3.5">Vehicle / Machinery Name</th>
+                                <th class="p-3.5">HSN Code</th>
+                                <th class="p-3.5">Base Price (₹)</th>
+                                <th class="p-3.5">Specifications</th>
+                                <th class="p-3.5 rounded-r-xl text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicle-master-body" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-parts" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Spare Parts & Accessories Catalog (60+ Items)</h2>
+                        <p class="text-xs text-slate-400 mt-1">Complete spare parts inventory categorized across Vacuum, Jetting, Hydraulic, Electrical, Chassis & Consumable systems.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <select id="part-category-filter" onchange="filterPartsMasterTable()" class="p-2.5 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white">
+                            <option value="ALL font-bold">All System Categories</option>
+                            <option value="Vacuum System">Vacuum System</option>
+                            <option value="Jetting System">Jetting System</option>
+                            <option value="Hydraulic System">Hydraulic System</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Chassis & Body">Chassis & Body</option>
+                            <option value="Consumables">Consumables</option>
+                        </select>
+                        <input type="text" id="part-master-search" oninput="filterPartsMasterTable()" placeholder="🔍 Search part name..." class="p-2.5 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
+                                <th class="p-3.5 rounded-l-xl">ID</th>
+                                <th class="p-3.5">Spare Part Name</th>
+                                <th class="p-3.5">System Category</th>
+                                <th class="p-3.5">HSN Code</th>
+                                <th class="p-3.5">Unit Price (₹)</th>
+                                <th class="p-3.5">Stock</th>
+                                <th class="p-3.5 rounded-r-xl text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parts-master-body" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-customers" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Customer & Municipal Corporation Master</h2>
+                        <p class="text-xs text-slate-400 mt-1">Manage municipal commissioners, corporations, contact details, and GSTIN records.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
+                                <th class="p-3.5 rounded-l-xl">ID</th>
+                                <th class="p-3.5">Customer Name</th>
+                                <th class="p-3.5">Contact Person</th>
+                                <th class="p-3.5">Phone & Email</th>
+                                <th class="p-3.5">GSTIN</th>
+                                <th class="p-3.5">Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customer-master-body" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-sync" class="hidden space-y-6">
+            <div class="bg-slate-900/80 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 space-y-6">
+                <div class="border-b border-slate-800 pb-4">
+                    <h2 class="text-xl font-extrabold text-white">Google Apps Script Backend Web App Link Configuration</h2>
+                    <p class="text-xs text-slate-400 mt-1">Connect this frontend to your separate deployed Google Apps Script Web App for seamless Google Sheets synchronization.</p>
+                </div>
+
+                <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Deployed Google Apps Script Web App URL</label>
+                        <div class="flex gap-2">
+                            <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 p-3.5 rounded-xl border border-slate-700 text-xs bg-slate-900 text-white font-mono focus:outline-none focus:border-orange-500">
+                            <button onclick="saveAndTestGasUrl()" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-xl text-xs font-semibold shadow transition">Save & Test Link</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <button onclick="triggerSheetSetup()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl text-xs font-semibold shadow transition">🚀 Initialize Sheet Tabs (Execute setupSheets)</button>
+                        <button onclick="fetchInitialDataFromCloud()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl text-xs font-semibold shadow transition">🔄 Sync Master Data from Google Sheets</button>
+                    </div>
+
+                    <div id="sync-console" class="p-4 bg-slate-900 border border-slate-800 rounded-xl font-mono text-slate-300 text-[11px] space-y-1">
+                        <div class="text-slate-400">// Connection Console Output</div>
+                        <div id="console-output" class="text-emerald-400">Status: Enterprise Web Frontend Ready.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Vehicle Picker Modal -->
+    <div id="vehicle-picker-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4 border border-slate-800 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white">Select Vehicle / Heavy Machinery (29 Available)</h3>
+                <button onclick="closeVehiclePickerModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+            </div>
+            <input type="text" id="modal-vehicle-search" oninput="renderVehiclePickerList()" placeholder="Search vehicle model..." class="w-full p-3 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white focus:outline-none focus:border-orange-500">
+            <div id="modal-vehicle-list" class="flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-800/60"></div>
+        </div>
+    </div>
+
+    <!-- Spare Part Picker Modal -->
+    <div id="part-picker-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4 border border-slate-800 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white">Select Spare Part & Accessory (60+ Items)</h3>
+                <button onclick="closePartPickerModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+            </div>
+            <div class="flex gap-2">
+                <select id="modal-part-cat-filter" onchange="renderPartPickerList()" class="p-3 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white">
+                    <option value="ALL">All Categories</option>
+                    <option value="Vacuum System">Vacuum System</option>
+                    <option value="Jetting System">Jetting System</option>
+                    <option value="Hydraulic System">Hydraulic System</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Chassis & Body">Chassis & Body</option>
+                    <option value="Consumables">Consumables</option>
+                </select>
+                <input type="text" id="modal-part-search" oninput="renderPartPickerList()" placeholder="Search spare part name..." class="flex-1 p-3 rounded-xl border border-slate-700 bg-slate-950 text-xs text-white focus:outline-none focus:border-orange-500">
+            </div>
+            <div id="modal-part-list" class="flex-1 overflow-y-auto space-y-2 pr-1 divide-y divide-slate-800/60"></div>
+        </div>
+    </div>
+
+    <div id="preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 rounded-3xl max-w-4xl w-full p-6 md:p-8 shadow-2xl space-y-6 max-h-[95vh] overflow-y-auto border border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4 no-print">
+                <h3 class="text-base font-bold text-white">Quotation Print Preview</h3>
+                <div class="flex gap-2.5">
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">Print</button>
+                    <button onclick="downloadPDF()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow transition">Download PDF</button>
+                    <button onclick="closePreview()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-semibold transition">Close</button>
+                </div>
+            </div>
+
+            <div id="printable-quotation" class="bg-white p-8 md:p-12 rounded-2xl space-y-6 text-slate-800 shadow-2xl">
+                <div class="flex justify-between items-start border-b-2 border-orange-500 pb-6">
+                    <div class="space-y-1">
+                        <h2 id="p-company-title" class="text-xl font-black text-slate-900 tracking-wide">J&J INDUSTRIES</h2>
+                        <p class="text-xs text-slate-600 font-medium">Plot 442 Gopal Industrial Estate, Gujarat</p>
+                        <p id="p-company-gst" class="text-xs text-slate-600">GSTIN: 24BIKPJ7530F1ZD | Contact: +91 98250 00000</p>
+                    </div>
+                    <div class="text-right space-y-1">
+                        <h2 class="text-xl font-black text-slate-900">QUOTATION</h2>
+                        <p class="text-xs font-bold text-orange-600 font-mono" id="p-q-no">JJ/Q/2026-27/1001</p>
+                        <p class="text-[11px] font-bold text-slate-700" id="p-q-type">Type: Municipal Tender</p>
+                        <p class="text-xs text-slate-500 font-mono" id="p-date">Date: 2026-09-24</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <p class="text-slate-400 uppercase font-bold text-[10px]">Quotation For:</p>
+                        <p id="p-customer-name" class="font-bold text-slate-900 mt-0.5">Vapi Municipal Corporation</p>
+                        <p id="p-customer-details" class="text-slate-600 mt-0.5">Attn: Shri R. K. Sharma | GSTIN: 24AAALV1234A1Z1</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-slate-400 uppercase font-bold text-[10px]">Payment Terms:</p>
+                        <p id="p-terms" class="font-semibold text-slate-800 mt-0.5">50% Advance, 50% Delivery</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <div id="p-section-1">
+                        <h4 id="p-table1-title" class="font-bold text-slate-900 mb-2">1. Vehicles & Heavy Machinery (HSN 8705)</h4>
+                        <table class="w-full border-collapse border border-slate-300">
+                            <thead><tr class="bg-slate-100 text-slate-700"><th class="border p-2 text-left">Item Description</th><th class="border p-2 text-left">HSN</th><th class="border p-2 text-center">Qty</th><th class="border p-2 text-right">Unit Price</th><th class="border p-2 text-right">Total Amount</th></tr></thead>
+                            <tbody id="p-rows-vehicles"></tbody>
+                        </table>
+                    </div>
+                    <div id="p-section-2">
+                        <h4 id="p-table2-title" class="font-bold text-slate-900 mb-2">2. Spare Parts & Replacement Accessories</h4>
+                        <table class="w-full border-collapse border border-slate-300">
+                            <thead><tr class="bg-slate-100 text-slate-700"><th class="border p-2 text-left">Item Description</th><th class="border p-2 text-left">HSN</th><th class="border p-2 text-center">Qty</th><th class="border p-2 text-right">Unit Price</th><th class="border p-2 text-right">Total Amount</th></tr></thead>
+                            <tbody id="p-rows-parts"></tbody>
+                        </table>
+                    </div>
+                    <div id="p-section-3">
+                        <h4 id="p-table3-title" class="font-bold text-slate-900 mb-2">3. Service, Repairs & Annual Maintenance (AMC)</h4>
+                        <table class="w-full border-collapse border border-slate-300">
+                            <thead><tr class="bg-slate-100 text-slate-700"><th class="border p-2 text-left">Item Description</th><th class="border p-2 text-left">HSN</th><th class="border p-2 text-center">Units</th><th class="border p-2 text-right">Rate</th><th class="border p-2 text-right">Total Amount</th></tr></thead>
+                            <tbody id="p-rows-labour"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-4">
+                    <div class="w-72 space-y-1.5 text-xs">
+                        <div class="flex justify-between"><span class="text-slate-600">Sub Total:</span> <span id="p-subtotal" class="font-semibold text-slate-900 font-mono">₹0.00</span></div>
+                        <div id="p-row-discount" class="flex justify-between"><span class="text-slate-600">Discount:</span> <span id="p-discount" class="font-semibold text-red-600 font-mono">-₹0.00</span></div>
+                        <div id="p-row-packtrans" class="flex justify-between"><span class="text-slate-600">Freight & Logistics:</span> <span id="p-packtrans" class="font-semibold text-slate-900 font-mono">₹17,000.00</span></div>
+                        <div class="flex justify-between"><span class="text-slate-600">Taxable Amount:</span> <span id="p-taxable" class="font-semibold text-slate-900 font-mono">₹0.00</span></div>
+                        <div class="flex justify-between"><span class="text-slate-600">GST (18%):</span> <span id="p-gst" class="font-semibold text-slate-900 font-mono">₹0.00</span></div>
+                        <div class="border-t border-slate-300 pt-2 flex justify-between text-sm font-black text-slate-900"><span>Grand Total:</span> <span id="p-grandtotal" class="text-orange-600 font-mono">₹0.00</span></div>
+                    </div>
+                </div>
+
+                <div class="pt-8 border-t border-slate-200 flex justify-between items-end text-xs text-slate-500">
+                    <div>
+                        <p class="font-bold text-slate-800">For J&J INDUSTRIES</p>
+                        <div class="h-10"></div>
+                        <p>Authorized Signatory</p>
+                    </div>
+                    <div class="text-right">
+                        <p>Plot 442 Gopal Industrial Estate, Gujarat</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Full list of 29 Vehicles & Machinery
+        const RAW_VEHICLES = [
+            { name: "Truck Mounted Sewer Suction Machine 3000L", hsn: "8705", price: 850000, specs: "3000L Heavy Tank, High Vacuum Pump" },
+            { name: "Truck Mounted Sewer Suction Machine 4000L", hsn: "8705", price: 980000, specs: "4000L Tank, Heavy Duty Chassis" },
+            { name: "Truck Mounted Sewer Suction Machine 5000L", hsn: "8705", price: 1120000, specs: "5000L Sludge Capacity, Vacuum System" },
+            { name: "Tractor Mounted Sewer Suction Machine 3000L", hsn: "8705", price: 480000, specs: "Tractor PTO Driven Suction Machine" },
+            { name: "Tractor Mounted Sewer Suction Machine 4000L", hsn: "8705", price: 560000, specs: "4000L Sludge Tank with PTO Pump" },
+            { name: "Portable Sewer Suction Machine", hsn: "8705", price: 320000, specs: "Compact Narrow Alley Suction Unit" },
+            { name: "3500L Trailer Mounted Sewer Suction", hsn: "8705", price: 420000, specs: "Twin Axle Heavy Trailer Suction" },
+            { name: "5000L Trailer Mounted Sewer Suction", hsn: "8705", price: 580000, specs: "5000L High Capacity Trailer Unit" },
+            { name: "Sewer Suction Machine 2000L", hsn: "8705", price: 390000, specs: "2000L Light Municipal Suction Unit" },
+            { name: "Sewer Suction Machine 6000L", hsn: "8705", price: 1350000, specs: "6000L Heavy Duty Sludge Tanker" },
+            { name: "Truck Mounted Sewer Jetting Machine 4000L", hsn: "8705", price: 1250000, specs: "High Pressure Jetting Pump 150 LPM" },
+            { name: "Mini Sewer Jetting Machine 500L", hsn: "8705", price: 280000, specs: "Compact Alley High Pressure Cleaner" },
+            { name: "Truck Mounted Sewer Jetting 10000L", hsn: "8705", price: 2450000, specs: "10,000L Mega High Flow Jetting Unit" },
+            { name: "Trailer Mounted Sewer Jetting 2000L", hsn: "8705", price: 540000, specs: "2000L HP Jetting Trailer System" },
+            { name: "Trailer Mounted Sewer Jetting 4000L", hsn: "8705", price: 780000, specs: "4000L Heavy Duty Jetting Trailer" },
+            { name: "Metal MS Sewer Cleaning Machine", hsn: "8705", price: 195000, specs: "Mechanical Rodding Sewer Cleaner" },
+            { name: "Sewer Cleaning Machine Standard", hsn: "8705", price: 230000, specs: "Standard Municipal Sewer De-clogger" },
+            { name: "Portable Truck Mounted Sewer Suction Cum Jetting Machine", hsn: "8705", price: 1650000, specs: "Dual Function Compact Unit" },
+            { name: "Truck Mounted Sewer Suction Cum Jetting 3000L-24000L Capacity", hsn: "8705", price: 2850000, specs: "Custom Modular Heavy Suction Jetting" },
+            { name: "Sewer Suction Cum Jetting Machine 4000L (150-200 LPM)", hsn: "8705", price: 2100000, specs: "200 LPM High Flow Combined Machine" },
+            { name: "Hydraulic Sky Lift 10m Articulated", hsn: "8705", price: 1150000, specs: "10m Articulated Arm Sky Lift" },
+            { name: "Hydraulic Sky Lift 14m Artic & Telescopic", hsn: "8705", price: 1450000, specs: "14m Dual Boom Platform Sky Lift" },
+            { name: "Hydraulic Sky Lift 12m Knuckle Boom", hsn: "8705", price: 1280000, specs: "12m Knuckle Boom Aerial Work Platform" },
+            { name: "Hydraulic Sky Lift 16m Telescopic / Three Boom", hsn: "8705", price: 1850000, specs: "16m Three Stage Telescopic Platform" },
+            { name: "9.5m Aerial Work Platform", hsn: "8705", price: 920000, specs: "Compact Street Light Maintenance Lift" },
+            { name: "Desilting Machine 1000L Truck Mounted", hsn: "8705", price: 750000, specs: "Silt Grabber & Desilting Bucket" },
+            { name: "Desilting Machine 1500L Truck Mounted", hsn: "8705", price: 920000, specs: "Heavy Grab Bucket & Tanker Unit" },
+            { name: "1800W Tractor Mounted Road Sweeper", hsn: "8479", price: 380000, specs: "1800mm Sweeping Width Hydraulic Broom" },
+            { name: "Open Drain Nala Cleaning Machine", hsn: "8705", price: 880000, specs: "Hydraulic Arm Canal & Nala Cleaner" }
+        ];
+
+        // Full list of 60+ Spare Parts & System Categories
+        const RAW_PARTS = [
+            { name: "Vacuum Pump 3000L", category: "Vacuum System", hsn: "8414", price: 95000, stock: 12 },
+            { name: "Vacuum Pump 6000L", category: "Vacuum System", hsn: "8414", price: 145000, stock: 8 },
+            { name: "Suction Hose 3inch", category: "Vacuum System", hsn: "3917", price: 14000, stock: 30 },
+            { name: "Suction Hose 4inch", category: "Vacuum System", hsn: "3917", price: 22000, stock: 45 },
+            { name: "Suction Hose 6inch", category: "Vacuum System", hsn: "3917", price: 38000, stock: 15 },
+            { name: "Gate Valve 3inch", category: "Vacuum System", hsn: "8481", price: 8500, stock: 25 },
+            { name: "Non-Return Valve", category: "Vacuum System", hsn: "8481", price: 6200, stock: 35 },
+            { name: "Pressure Relief Valve", category: "Vacuum System", hsn: "8481", price: 7800, stock: 20 },
+            { name: "Vacuum Tank Manhole Cover", category: "Vacuum System", hsn: "7326", price: 12500, stock: 18 },
+            { name: "Exhaust Silencer", category: "Vacuum System", hsn: "8421", price: 9800, stock: 14 },
+            { name: "Oil Catchment Tank", category: "Vacuum System", hsn: "7310", price: 11000, stock: 22 },
+            { name: "Sight Glass Gauge", category: "Vacuum System", hsn: "9026", price: 3400, stock: 50 },
+            { name: "Float Ball Assembly", category: "Vacuum System", hsn: "8481", price: 5800, stock: 28 },
+            { name: "Vacuum Filter Mesh", category: "Vacuum System", hsn: "8421", price: 2900, stock: 60 },
+            { name: "Hose Clamps Heavy", category: "Vacuum System", hsn: "7326", price: 450, stock: 200 },
+            { name: "HP Pump 150 LPM", category: "Jetting System", hsn: "8413", price: 185000, stock: 10 },
+            { name: "HP Pump 200 LPM", category: "Jetting System", hsn: "8413", price: 240000, stock: 6 },
+            { name: "High Pressure Hose 50m", category: "Jetting System", hsn: "4009", price: 28000, stock: 25 },
+            { name: "High Pressure Hose 100m", category: "Jetting System", hsn: "4009", price: 52000, stock: 15 },
+            { name: "Hose Reel Assembly", category: "Jetting System", hsn: "8479", price: 45000, stock: 12 },
+            { name: "Nozzle Set Standard", category: "Jetting System", hsn: "8424", price: 18000, stock: 30 },
+            { name: "Root Cutter Nozzle", category: "Jetting System", hsn: "8424", price: 35000, stock: 18 },
+            { name: "Grenade Nozzle", category: "Jetting System", hsn: "8424", price: 29000, stock: 14 },
+            { name: "Fan Jet Nozzle", category: "Jetting System", hsn: "8424", price: 12000, stock: 40 },
+            { name: "Water Tank 4000L MS", category: "Jetting System", hsn: "7310", price: 160000, stock: 5 },
+            { name: "Water Tank SS 304", category: "Jetting System", hsn: "7310", price: 290000, stock: 3 },
+            { name: "Pressure Regulator Valve", category: "Jetting System", hsn: "8481", price: 16500, stock: 22 },
+            { name: "Water Filter Cartridge", category: "Jetting System", hsn: "8421", price: 4200, stock: 50 },
+            { name: "Ball Valve 1inch", category: "Jetting System", hsn: "8481", price: 2100, stock: 80 },
+            { name: "Quick Coupling Set", category: "Jetting System", hsn: "7307", price: 3800, stock: 65 },
+            { name: "Hydraulic Power Pack", category: "Hydraulic System", hsn: "8412", price: 135000, stock: 8 },
+            { name: "Hydraulic Cylinder Boom", category: "Hydraulic System", hsn: "8412", price: 42000, stock: 15 },
+            { name: "Hydraulic Cylinder Outrigger", category: "Hydraulic System", hsn: "8412", price: 28000, stock: 20 },
+            { name: "Control Valve 4 Lever", category: "Hydraulic System", hsn: "8481", price: 24000, stock: 14 },
+            { name: "Control Valve 6 Lever", category: "Hydraulic System", hsn: "8481", price: 34000, stock: 10 },
+            { name: "Hydraulic Oil ISO 68", category: "Hydraulic System", hsn: "2710", price: 18500, stock: 40 },
+            { name: "Gear Pump", category: "Hydraulic System", hsn: "8413", price: 22000, stock: 18 },
+            { name: "Hydraulic Filter Element", category: "Hydraulic System", hsn: "8421", price: 3100, stock: 45 },
+            { name: "High Pressure Hose 1/2inch", category: "Hydraulic System", hsn: "4009", price: 8500, stock: 50 },
+            { name: "Seal Kit Cylinder", category: "Hydraulic System", hsn: "4016", price: 2600, stock: 90 },
+            { name: "Solenoid Valve 24V", category: "Hydraulic System", hsn: "8481", price: 9200, stock: 25 },
+            { name: "Oil Cooler Unit", category: "Hydraulic System", hsn: "8419", price: 32000, stock: 11 },
+            { name: "Pressure Gauge 400bar", category: "Hydraulic System", hsn: "9026", price: 2800, stock: 60 },
+            { name: "Hydraulic Tank 50L", category: "Hydraulic System", hsn: "7310", price: 14500, stock: 16 },
+            { name: "Breather Cap", category: "Hydraulic System", hsn: "8309", price: 850, stock: 100 },
+            { name: "Control Panel with Joystick", category: "Electrical", hsn: "8537", price: 68000, stock: 9 },
+            { name: "Exide Heavy Duty Battery 12V", category: "Electrical", hsn: "8507", price: 11500, stock: 30 },
+            { name: "Beacon Flashing Light", category: "Electrical", hsn: "8512", price: 3200, stock: 50 },
+            { name: "Working LED Floodlight", category: "Electrical", hsn: "9405", price: 2400, stock: 75 },
+            { name: "Wiring Harness Complete", category: "Electrical", hsn: "8544", price: 14500, stock: 18 },
+            { name: "Ignition Switch Panel", category: "Electrical", hsn: "8536", price: 4200, stock: 35 },
+            { name: "Emergency Stop Switch", category: "Electrical", hsn: "8536", price: 1800, stock: 80 },
+            { name: "Control Relay 24V", category: "Electrical", hsn: "8536", price: 950, stock: 120 },
+            { name: "Alternator Heavy Duty", category: "Electrical", hsn: "8511", price: 16500, stock: 12 },
+            { name: "Starter Motor", category: "Electrical", hsn: "8511", price: 18500, stock: 10 },
+            { name: "Dashboard Buzzer", category: "Electrical", hsn: "8531", price: 650, stock: 100 },
+            { name: "Limit Switch", category: "Electrical", hsn: "8536", price: 1400, stock: 85 },
+            { name: "Fuse Box Assembly", category: "Electrical", hsn: "8537", price: 2900, stock: 40 },
+            { name: "Junction Box Weatherproof", category: "Electrical", hsn: "8538", price: 1850, stock: 55 },
+            { name: "Digital Hour Meter", category: "Electrical", hsn: "9029", price: 2200, stock: 45 },
+            { name: "Trailer Chassis MS", category: "Chassis & Body", hsn: "8716", price: 120000, stock: 6 },
+            { name: "Tank Fabrication MS", category: "Chassis & Body", hsn: "7310", price: 220000, stock: 4 },
+            { name: "Heavy Duty Tyre 9.00-20", category: "Chassis & Body", hsn: "4011", price: 18500, stock: 32 },
+            { name: "Brake System Assembly", category: "Chassis & Body", hsn: "8708", price: 34000, stock: 12 },
+            { name: "Leaf Spring Suspension", category: "Chassis & Body", hsn: "7320", price: 22000, stock: 20 },
+            { name: "Mudguards Heavy", category: "Chassis & Body", hsn: "8708", price: 4800, stock: 40 },
+            { name: "Towing Hook Heavy", category: "Chassis & Body", hsn: "8708", price: 6500, stock: 25 },
+            { name: "Tool Box Steel", category: "Chassis & Body", hsn: "7326", price: 5200, stock: 30 },
+            { name: "Stabilizer Jack Leg", category: "Chassis & Body", hsn: "8425", price: 12500, stock: 22 },
+            { name: "Rear Bump Stop", category: "Chassis & Body", hsn: "4016", price: 1400, stock: 50 },
+            { name: "Reflective Tape Roll", category: "Chassis & Body", hsn: "3919", price: 1200, stock: 100 },
+            { name: "Chassis Paint Primer", category: "Chassis & Body", hsn: "3208", price: 3800, stock: 40 },
+            { name: "Side Guard Rail", category: "Chassis & Body", hsn: "7308", price: 7500, stock: 28 },
+            { name: "Axle Beam Assembly", category: "Chassis & Body", hsn: "8708", price: 48000, stock: 8 },
+            { name: "Kingpin Assembly", category: "Chassis & Body", hsn: "8708", price: 9200, stock: 18 },
+            { name: "Synthetic Grease Bucket", category: "Consumables", hsn: "2710", price: 4500, stock: 60 },
+            { name: "O-Ring Kit Assorted", category: "Consumables", hsn: "4016", price: 2800, stock: 75 },
+            { name: "Bearing Set SKF", category: "Consumables", hsn: "8482", price: 6400, stock: 50 },
+            { name: "Gasket Sheet Non-Asbestos", category: "Consumables", hsn: "6812", price: 1900, stock: 80 },
+            { name: "Thread Seal Tape", category: "Consumables", hsn: "3920", price: 350, stock: 300 },
+            { name: "Hydraulic Thread Sealant", category: "Consumables", hsn: "3506", price: 850, stock: 120 },
+            { name: "Anti-Rust Spray", category: "Consumables", hsn: "3403", price: 480, stock: 150 },
+            { name: "Industrial Enamel Paint Orange", category: "Consumables", hsn: "3208", price: 4200, stock: 45 },
+            { name: "Black Bituminous Coating", category: "Consumables", hsn: "2715", price: 3100, stock: 35 },
+            { name: "Cotton Waste Rags", category: "Consumables", hsn: "6310", price: 1200, stock: 90 }
+        ];
+
+        let appState = {
+            webAppUrl: localStorage.getItem('JJ_GAS_WEBAPP_URL') || '',
+            customers: [
+                { id: "CUST-001", name: "Vapi Municipal Corporation", contact: "Shri R. K. Sharma", phone: "+91 9825012345", email: "commissioner@vapi.gov.in", gstin: "24AAALV1234A1Z1", address: "Main Office, Vapi, Gujarat" },
+                { id: "CUST-002", name: "Surat Municipal Corporation", contact: "Er. M. Patel", phone: "+91 9825098765", email: "drainage@surat.gov.in", gstin: "24AAALS5678B1Z2", address: "Mugdalla Road, Surat" },
+                { id: "CUST-003", name: "Ahmedabad Urban Dev Authority", contact: "Shri V. Mehta", phone: "+91 9824033445", email: "tenders@auda.gov.in", gstin: "24AAALA9988C1Z4", address: "Usmanpura, Ahmedabad" }
+            ],
+            vehicles: RAW_VEHICLES.map((v, idx) => ({ id: `VEH-${String(idx + 1).padStart(3, '0')}`, ...v })),
+            items: RAW_PARTS.map((p, idx) => ({ id: `PRT-${String(idx + 1).padStart(3, '0')}`, ...p })),
+            quotations: [],
+            nextQNo: "JJ/Q/2026-27/1001"
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('q-date').value = today;
+
+            if (appState.webAppUrl) {
+                document.getElementById('gas-url-input').value = appState.webAppUrl;
+                testBackendConnection();
+            } else {
+                updateConnStatus('local', 'Local Mode Active. Add Google Script Web App URL to enable Cloud Sync.');
+            }
+
+            renderMasterTables();
+            populateCustomerDropdown();
+            loadPackageTier(2);
+        });
+
+        function toggleQuotationTypeMode() {
+            const selectContainer = document.getElementById('q-type-select-container');
+            const manualContainer = document.getElementById('q-type-manual-container');
+            const toggleBtn = document.getElementById('q-type-toggle-btn');
+
+            if (manualContainer.classList.contains('hidden')) {
+                manualContainer.classList.remove('hidden');
+                selectContainer.classList.add('hidden');
+                toggleBtn.innerText = "← Select Preset";
+            } else {
+                manualContainer.classList.add('hidden');
+                selectContainer.classList.remove('hidden');
+                toggleBtn.innerText = "+ Manual Add";
+            }
+        }
+
+        function addCustomQuotationType() {
+            const val = document.getElementById('q-type-manual-input').value.trim();
+            if (!val) {
+                alert("Please type a valid quotation type name.");
+                return;
+            }
+            const select = document.getElementById('q-type');
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.innerText = val;
+            opt.selected = true;
+            select.appendChild(opt);
+
+            toggleQuotationTypeMode();
+            document.getElementById('q-type-manual-input').value = '';
+            alert(`Added new Quotation Type: "${val}"`);
+        }
+
+        function getSelectedQuotationType() {
+            const selectContainer = document.getElementById('q-type-select-container');
+            if (!selectContainer.classList.contains('hidden')) {
+                return document.getElementById('q-type').value;
+            } else {
+                return document.getElementById('q-type-manual-input').value.trim() || document.getElementById('q-type').value;
+            }
+        }
+
+        function openVehiclePickerModal() {
+            document.getElementById('vehicle-picker-modal').classList.remove('hidden');
+            renderVehiclePickerList();
+        }
+
+        function closeVehiclePickerModal() {
+            document.getElementById('vehicle-picker-modal').classList.add('hidden');
+        }
+
+        function renderVehiclePickerList() {
+            const search = document.getElementById('modal-vehicle-search').value.toLowerCase();
+            const filtered = appState.vehicles.filter(v => v.name.toLowerCase().includes(search) || v.hsn.includes(search));
+            const list = document.getElementById('modal-vehicle-list');
+
+            list.innerHTML = filtered.map(v => `
+                <div class="p-3 flex justify-between items-center hover:bg-slate-800/80 rounded-xl transition">
+                    <div>
+                        <p class="font-bold text-white text-xs">${v.name}</p>
+                        <p class="text-[11px] text-slate-400 font-mono">HSN: ${v.hsn} | ${v.specs}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-emerald-400 font-mono text-xs">₹${parseFloat(v.price).toLocaleString('en-IN')}</p>
+                        <button onclick="pickVehicleItem('${v.id}')" class="mt-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg text-[11px] font-semibold transition">+ Add to Quotation</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function pickVehicleItem(vehId) {
+            const veh = appState.vehicles.find(v => v.id === vehId);
+            if (veh) {
+                addVehicleRowWithData(veh.name, veh.hsn, 1, veh.price);
+                closeVehiclePickerModal();
+            }
+        }
+
+        function openPartPickerModal() {
+            document.getElementById('part-picker-modal').classList.remove('hidden');
+            renderPartPickerList();
+        }
+
+        function closePartPickerModal() {
+            document.getElementById('part-picker-modal').classList.add('hidden');
+        }
+
+        function renderPartPickerList() {
+            const cat = document.getElementById('modal-part-cat-filter').value;
+            const search = document.getElementById('modal-part-search').value.toLowerCase();
+            const filtered = appState.items.filter(p => {
+                const matchesCat = (cat === 'ALL' || p.category === cat);
+                const matchesSearch = p.name.toLowerCase().includes(search) || p.hsn.includes(search);
+                return matchesCat && matchesSearch;
+            });
+            const list = document.getElementById('modal-part-list');
+
+            list.innerHTML = filtered.map(p => `
+                <div class="p-3 flex justify-between items-center hover:bg-slate-800/80 rounded-xl transition">
+                    <div>
+                        <p class="font-bold text-white text-xs">${p.name}</p>
+                        <p class="text-[11px] text-slate-400 font-mono"><span class="text-purple-400 font-semibold">[${p.category}]</span> HSN: ${p.hsn} | Stock: ${p.stock}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-emerald-400 font-mono text-xs">₹${parseFloat(p.price).toLocaleString('en-IN')}</p>
+                        <button onclick="pickPartItem('${p.id}')" class="mt-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg text-[11px] font-semibold transition">+ Add to Quotation</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function pickPartItem(partId) {
+            const part = appState.items.find(p => p.id === partId);
+            if (part) {
+                addPartRowWithData(part.name, part.hsn, 1, part.price);
+                closePartPickerModal();
+            }
+        }
+
+        async function callGasBackend(payload) {
+            if (!appState.webAppUrl) {
+                throw new Error("No Google Script Web App URL configured.");
+            }
+            const response = await fetch(appState.webAppUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+            return await response.json();
+        }
+
+        function saveAndTestGasUrl() {
+            const url = document.getElementById('gas-url-input').value.trim();
+            if (!url) { alert("Please enter a valid Google Apps Script Web App URL."); return; }
+            appState.webAppUrl = url;
+            localStorage.setItem('JJ_GAS_WEBAPP_URL', url);
+            testBackendConnection();
+        }
+
+        async function testBackendConnection() {
+            updateConnStatus('testing', 'Testing connection to Google Apps Script...');
+            try {
+                const res = await callGasBackend({ action: "ping" });
+                if (res && res.success) {
+                    updateConnStatus('online', 'Connected to Google Sheets Web App!');
+                    logConsole(`Success: ${res.message}`);
+                    fetchInitialDataFromCloud();
+                } else {
+                    updateConnStatus('error', 'Connection failed: ' + (res.message || 'Unknown response'));
+                }
+            } catch (err) {
+                updateConnStatus('error', 'Error connecting to Web App. Verify CORS / URL permissions.');
+                logConsole(`Network Error: ${err.message}`);
+            }
+        }
+
+        async function fetchInitialDataFromCloud() {
+            try {
+                logConsole("Fetching master data from Google Sheets...");
+                const res = await callGasBackend({ action: "getInitialData" });
+                if (res && res.success) {
+                    if (res.customers && res.customers.length) appState.customers = res.customers;
+                    if (res.vehicles && res.vehicles.length) appState.vehicles = res.vehicles;
+                    if (res.items && res.items.length) appState.items = res.items;
+                    if (res.quotations) appState.quotations = res.quotations;
+                    if (res.nextQuotationNo) {
+                        appState.nextQNo = res.nextQuotationNo;
+                        document.getElementById('q-no').value = res.nextQuotationNo;
+                    }
+                    renderMasterTables();
+                    populateCustomerDropdown();
+                    logConsole("Master data synchronized with Google Sheets!");
+                }
+            } catch (err) {
+                logConsole(`Data fetch error: ${err.message}`);
+            }
+        }
+
+        async function triggerSheetSetup() {
+            try {
+                logConsole("Initializing Google Sheet tabs...");
+                const res = await callGasBackend({ action: "setupSheets" });
+                alert(res.message);
+                logConsole(res.message);
+            } catch (err) {
+                alert("Sheet setup error: " + err.message);
+            }
+        }
+
+        function updateConnStatus(status, message) {
+            const dot = document.getElementById('conn-indicator-dot');
+            const title = document.getElementById('conn-status-title');
+            const desc = document.getElementById('conn-status-desc');
+            desc.innerText = message;
+            if (status === 'online') {
+                dot.className = "h-3 w-3 rounded-full bg-emerald-500 shadow-md shadow-emerald-500/50";
+                title.innerText = "Google Web App Connected";
+            } else if (status === 'testing') {
+                dot.className = "h-3 w-3 rounded-full bg-amber-500 animate-ping";
+                title.innerText = "Testing Connection...";
+            } else if (status === 'error') {
+                dot.className = "h-3 w-3 rounded-full bg-red-500 shadow-md shadow-red-500/50";
+                title.innerText = "Connection Failed";
+            } else {
+                dot.className = "h-3 w-3 rounded-full bg-slate-500";
+                title.innerText = "Local Mode Active";
+            }
+        }
+
+        function logConsole(msg) {
+            const out = document.getElementById('console-output');
+            out.innerText = `[${new Date().toLocaleTimeString()}] ${msg}\n` + out.innerText;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        }
+
+        function renderMasterTables() {
+            document.getElementById('stat-total-q').innerText = appState.quotations.length;
+            document.getElementById('stat-approved').innerText = appState.quotations.filter(q => q.status === 'Approved' || q.status === 'Saved Cloud').length;
+            document.getElementById('stat-vehicles').innerText = appState.vehicles.length;
+            document.getElementById('stat-parts').innerText = appState.items.length;
+            document.getElementById('stat-customers').innerText = appState.customers.length;
+
+            const qBody = document.getElementById('quotations-table-body');
+            qBody.innerHTML = appState.quotations.length === 0 ? 
+                `<tr><td colspan="8" class="p-4 text-center text-slate-500">No saved quotations yet.</td></tr>` :
+                appState.quotations.map(q => `
+                    <tr class="hover:bg-slate-800/40 font-mono">
+                        <td class="p-3.5 font-bold text-orange-400">${q.qNo}</td>
+                        <td class="p-3.5 font-sans font-medium text-white">${q.customer}</td>
+                        <td class="p-3.5 font-sans text-xs text-orange-300 font-semibold">${q.type || 'Municipal Tender'}</td>
+                        <td class="p-3.5 font-sans text-slate-400">${q.date}</td>
+                        <td class="p-3.5 text-white">₹${parseFloat(q.taxable || 0).toLocaleString('en-IN')}</td>
+                        <td class="p-3.5 font-bold text-emerald-400">₹${parseFloat(q.grandTotal || 0).toLocaleString('en-IN')}</td>
+                        <td class="p-3.5"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">${q.status || 'Draft'}</span></td>
+                        <td class="p-3.5 text-center font-sans">
+                            <button onclick="previewQuotation()" class="text-xs text-orange-400 hover:underline font-semibold">Preview</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            filterVehicleMasterTable();
+            filterPartsMasterTable();
+
+            document.getElementById('customer-master-body').innerHTML = appState.customers.map(c => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="p-3.5 font-mono text-slate-400">${c.id}</td>
+                    <td class="p-3.5 font-semibold text-white">${c.name}</td>
+                    <td class="p-3.5 text-slate-300">${c.contact}</td>
+                    <td class="p-3.5 text-slate-300">${c.phone}<br><span class="text-[10px] text-slate-400">${c.email}</span></td>
+                    <td class="p-3.5 font-mono text-orange-400">${c.gstin}</td>
+                    <td class="p-3.5 text-slate-400 text-[11px]">${c.address}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterVehicleMasterTable() {
+            const search = document.getElementById('vehicle-master-search')?.value.toLowerCase() || '';
+            const filtered = appState.vehicles.filter(v => v.name.toLowerCase().includes(search) || v.hsn.includes(search));
+
+            document.getElementById('vehicle-master-body').innerHTML = filtered.map(v => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="p-3.5 font-mono text-slate-400">${v.id}</td>
+                    <td class="p-3.5 font-semibold text-white">${v.name}</td>
+                    <td class="p-3.5 font-mono text-slate-300">${v.hsn}</td>
+                    <td class="p-3.5 font-mono font-bold text-emerald-400">₹${parseFloat(v.price).toLocaleString('en-IN')}</td>
+                    <td class="p-3.5 text-slate-400 text-[11px]">${v.specs}</td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="pickVehicleItem('${v.id}'); switchTab('quotation');" class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold hover:bg-orange-500 hover:text-white transition">+ Quotation</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterPartsMasterTable() {
+            const cat = document.getElementById('part-category-filter')?.value || 'ALL';
+            const search = document.getElementById('part-master-search')?.value.toLowerCase() || '';
+
+            const filtered = appState.items.filter(i => {
+                const matchesCat = (cat === 'ALL' || i.category === cat);
+                const matchesSearch = i.name.toLowerCase().includes(search) || i.hsn.includes(search);
+                return matchesCat && matchesSearch;
+            });
+
+            document.getElementById('parts-master-body').innerHTML = filtered.map(i => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="p-3.5 font-mono text-slate-400">${i.id}</td>
+                    <td class="p-3.5 font-semibold text-white">${i.name}</td>
+                    <td class="p-3.5 font-medium"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">${i.category}</span></td>
+                    <td class="p-3.5 font-mono text-slate-300">${i.hsn}</td>
+                    <td class="p-3.5 font-mono font-bold text-emerald-400">₹${parseFloat(i.price).toLocaleString('en-IN')}</td>
+                    <td class="p-3.5 font-mono text-slate-300">${i.stock} units</td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="pickPartItem('${i.id}'); switchTab('quotation');" class="bg-purple-500/20 text-purple-400 border border-purple-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold hover:bg-purple-500 hover:text-white transition">+ Quotation</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function populateCustomerDropdown() {
+            const select = document.getElementById('q-customer');
+            select.innerHTML = appState.customers.map(c => `<option value="${c.id}">${c.name} (${c.gstin})</option>`).join('');
+        }
+
+        function toggleQNoMode() {
+            const mode = document.getElementById('q-no-mode').value;
+            const input = document.getElementById('q-no');
+            if (mode === 'manual') {
+                input.removeAttribute('readonly');
+                input.classList.remove('bg-slate-950', 'text-slate-300');
+                input.classList.add('bg-slate-900', 'text-white');
+            } else {
+                input.setAttribute('readonly', 'true');
+                input.value = appState.nextQNo;
+                input.classList.add('bg-slate-950', 'text-slate-300');
+            }
+        }
+
+        function loadPackageTier(tier) {
+            clearQuotationRows();
+            if (tier === 1) {
+                addVehicleRowWithData("Truck Mounted Sewer Suction Machine 3000L", "8705", 1, 850000);
+                addPartRowWithData("Vacuum Pump 3000L", "8414", 1, 95000);
+                addPartRowWithData("Suction Hose 4inch", "3917", 1, 22000);
+            } else if (tier === 2) {
+                addVehicleRowWithData("Truck Mounted Sewer Suction Machine 4000L", "8705", 1, 980000);
+                addVehicleRowWithData("Truck Mounted Sewer Jetting Machine 4000L", "8705", 1, 1250000);
+                addPartRowWithData("HP Pump 150 LPM", "8413", 1, 185000);
+                addPartRowWithData("Root Cutter Nozzle", "8424", 1, 35000);
+                addLabourRowWithData("1 Year Annual Maintenance Contract (AMC) & On-Site Support", "9987", 1, 105000);
+            } else if (tier === 3) {
+                addVehicleRowWithData("Sewer Suction Cum Jetting Machine 4000L (150-200 LPM)", "8705", 1, 2100000);
+                addVehicleRowWithData("Hydraulic Sky Lift 14m Artic & Telescopic", "8705", 1, 1450000);
+                addPartRowWithData("Vacuum Pump 6000L", "8414", 1, 145000);
+                addPartRowWithData("High Pressure Hose 100m", "4009", 1, 52000);
+                addLabourRowWithData("Comprehensive Mega Fleet Maintenance Service (2 Years)", "9987", 1, 220000);
+            }
+            switchTab('quotation');
+            calculateTotals();
+        }
+
+        function clearQuotationRows() {
+            document.getElementById('vehicle-rows').innerHTML = '';
+            document.getElementById('part-rows').innerHTML = '';
+            document.getElementById('labour-rows').innerHTML = '';
+        }
+
+        function addManualVehicleRow() {
+            addVehicleRowWithData("", "8705", 1, 0);
+        }
+
+        function addVehicleRowWithData(name, hsn, qty, price) {
+            const tbody = document.getElementById('vehicle-rows');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/60";
+            tr.innerHTML = `
+                <td class="p-2.5"><input type="text" value="${name}" placeholder="Vehicle model name..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"></td>
+                <td class="p-2.5"><input type="text" value="${hsn}" class="w-20 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white"></td>
+                <td class="p-2.5"><input type="number" value="${qty}" oninput="calculateTotals()" class="w-16 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-qty"></td>
+                <td class="p-2.5"><input type="number" value="${price}" oninput="calculateTotals()" class="w-28 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-price"></td>
+                <td class="p-2.5 font-mono font-bold text-white row-total">₹0.00</td>
+                <td class="p-2.5 text-center"><button onclick="this.closest('tr').remove(); calculateTotals();" class="text-red-400 hover:text-red-300 font-bold">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+            calculateTotals();
+        }
+
+        function addManualPartRow() {
+            addPartRowWithData("", "8414", 1, 0);
+        }
+
+        function addPartRowWithData(name, hsn, qty, price) {
+            const tbody = document.getElementById('part-rows');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/60";
+            tr.innerHTML = `
+                <td class="p-2.5"><input type="text" value="${name}" placeholder="Part description..." class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"></td>
+                <td class="p-2.5"><input type="text" value="${hsn}" class="w-20 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white"></td>
+                <td class="p-2.5"><input type="number" value="${qty}" oninput="calculateTotals()" class="w-16 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-qty"></td>
+                <td class="p-2.5"><input type="number" value="${price}" oninput="calculateTotals()" class="w-28 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-price"></td>
+                <td class="p-2.5 font-mono font-bold text-white row-total">₹0.00</td>
+                <td class="p-2.5 text-center"><button onclick="this.closest('tr').remove(); calculateTotals();" class="text-red-400 hover:text-red-300 font-bold">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+            calculateTotals();
+        }
+
+        function addLabourRow() {
+            addLabourRowWithData("General Municipal Vehicle Service & Testing", "9987", 1, 25000);
+        }
+
+        function addLabourRowWithData(name, hsn, qty, price) {
+            const tbody = document.getElementById('labour-rows');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/60";
+            tr.innerHTML = `
+                <td class="p-2.5"><input type="text" value="${name}" class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"></td>
+                <td class="p-2.5"><input type="text" value="${hsn}" class="w-20 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white"></td>
+                <td class="p-2.5"><input type="number" value="${qty}" oninput="calculateTotals()" class="w-16 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-qty"></td>
+                <td class="p-2.5"><input type="number" value="${price}" oninput="calculateTotals()" class="w-28 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white row-price"></td>
+                <td class="p-2.5 font-mono font-bold text-white row-total">₹0.00</td>
+                <td class="p-2.5 text-center"><button onclick="this.closest('tr').remove(); calculateTotals();" class="text-red-400 hover:text-red-300 font-bold">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+            calculateTotals();
+        }
+
+        function removeSection(sectionId) {
+            document.getElementById(sectionId).style.display = 'none';
+            calculateTotals();
+        }
+
+        function toggleField(wrapperId, inputId) {
+            document.getElementById(wrapperId).style.display = 'none';
+            document.getElementById(inputId).value = 0;
+            calculateTotals();
+        }
+
+        function calculateTotals() {
+            let subtotal = 0;
+
+            const calcTable = (tableId) => {
+                const section = document.getElementById(tableId);
+                if (section && section.style.display === 'none') return;
+                const rows = section.querySelectorAll('tbody tr');
+                rows.forEach(tr => {
+                    const qty = parseFloat(tr.querySelector('.row-qty')?.value || 0);
+                    const price = parseFloat(tr.querySelector('.row-price')?.value || 0);
+                    const total = qty * price;
+                    subtotal += total;
+                    if (tr.querySelector('.row-total')) {
+                        tr.querySelector('.row-total').innerText = `₹${total.toLocaleString('en-IN')}`;
+                    }
+                });
+            };
+
+            calcTable('section-table-1');
+            calcTable('section-table-2');
+            calcTable('section-table-3');
+
+            const discount = parseFloat(document.getElementById('calc-discount')?.value || 0);
+            const packing = parseFloat(document.getElementById('calc-packing')?.value || 0);
+            const transport = parseFloat(document.getElementById('calc-transport')?.value || 0);
+
+            const packtrans = packing + transport;
+            const taxable = Math.max(0, subtotal - discount + packtrans);
+            const gst = taxable * 0.18;
+            const grandTotal = taxable + gst;
+
+            document.getElementById('lbl-subtotal').innerText = `₹${subtotal.toLocaleString('en-IN')}`;
+            document.getElementById('lbl-discount').innerText = `-₹${discount.toLocaleString('en-IN')}`;
+            document.getElementById('lbl-packtrans').innerText = `₹${packtrans.toLocaleString('en-IN')}`;
+            document.getElementById('lbl-taxable').innerText = `₹${taxable.toLocaleString('en-IN')}`;
+            document.getElementById('lbl-gst').innerText = `₹${gst.toLocaleString('en-IN')}`;
+            document.getElementById('lbl-grandtotal').innerText = `₹${grandTotal.toLocaleString('en-IN')}`;
+
+            return { subtotal, discount, packtrans, taxable, gst, grandTotal };
+        }
+
+        function previewQuotation() {
+            const totals = calculateTotals();
+            const qNo = document.getElementById('q-no').value;
+            const qDate = document.getElementById('q-date').value;
+            const qType = getSelectedQuotationType();
+            const custId = document.getElementById('q-customer').value;
+            const cust = appState.customers.find(c => c.id === custId) || appState.customers[0];
+
+            document.getElementById('p-q-no').innerText = qNo;
+            document.getElementById('p-q-type').innerText = `Type: ${qType}`;
+            document.getElementById('p-date').innerText = `Date: ${qDate}`;
+            document.getElementById('p-customer-name').innerText = cust.name;
+            document.getElementById('p-customer-details').innerText = `Attn: ${cust.contact} | GSTIN: ${cust.gstin} | Ph: ${cust.phone}`;
+            document.getElementById('p-terms').innerText = document.getElementById('q-terms').value;
+
+            const fillPreviewRows = (sourceTableId, previewTargetId) => {
+                const tbody = document.getElementById(previewTargetId);
+                tbody.innerHTML = '';
+                const section = document.getElementById(sourceTableId);
+                if (!section || section.style.display === 'none') return;
+                const rows = section.querySelectorAll('tbody tr');
+                rows.forEach(tr => {
+                    const name = tr.querySelectorAll('input')[0]?.value || '';
+                    const hsn = tr.querySelectorAll('input')[1]?.value || '';
+                    const qty = tr.querySelectorAll('input')[2]?.value || 0;
+                    const price = tr.querySelectorAll('input')[3]?.value || 0;
+                    const total = qty * price;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="border p-2 font-medium">${name}</td>
+                            <td class="border p-2 font-mono">${hsn}</td>
+                            <td class="border p-2 font-mono text-center">${qty}</td>
+                            <td class="border p-2 font-mono text-right">₹${parseFloat(price).toLocaleString('en-IN')}</td>
+                            <td class="border p-2 font-mono font-bold text-right">₹${total.toLocaleString('en-IN')}</td>
+                        </tr>
+                    `;
+                });
+            };
+
+            fillPreviewRows('section-table-1', 'p-rows-vehicles');
+            fillPreviewRows('section-table-2', 'p-rows-parts');
+            fillPreviewRows('section-table-3', 'p-rows-labour');
+
+            document.getElementById('p-subtotal').innerText = `₹${totals.subtotal.toLocaleString('en-IN')}`;
+            document.getElementById('p-discount').innerText = `-₹${totals.discount.toLocaleString('en-IN')}`;
+            document.getElementById('p-packtrans').innerText = `₹${totals.packtrans.toLocaleString('en-IN')}`;
+            document.getElementById('p-taxable').innerText = `₹${totals.taxable.toLocaleString('en-IN')}`;
+            document.getElementById('p-gst').innerText = `₹${totals.gst.toLocaleString('en-IN')}`;
+            document.getElementById('p-grandtotal').innerText = `₹${totals.grandTotal.toLocaleString('en-IN')}`;
+
+            document.getElementById('preview-modal').classList.remove('hidden');
+        }
+
+        function closePreview() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        }
+
+        function downloadPDF() {
+            previewQuotation();
+            setTimeout(() => {
+                const element = document.getElementById('printable-quotation');
+                html2canvas(element, { scale: 2 }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`Quotation_${document.getElementById('q-no').value.replace(/\//g, '_')}.pdf`);
+                });
+            }, 300);
+        }
+
+        async function saveQuotationToCloud() {
+            const totals = calculateTotals();
+            const qNo = document.getElementById('q-no').value;
+            const qType = getSelectedQuotationType();
+            const isAuto = document.getElementById('q-no-mode').value === 'auto';
+            const custId = document.getElementById('q-customer').value;
+            const cust = appState.customers.find(c => c.id === custId) || appState.customers[0];
+
+            const payload = {
+                action: "saveQuotation",
+                payload: {
+                    quotationNo: qNo,
+                    type: qType,
+                    isAutoGenerated: isAuto,
+                    date: document.getElementById('q-date').value,
+                    customerName: cust.name,
+                    customerGstin: cust.gstin,
+                    subtotal: totals.subtotal,
+                    discount: totals.discount,
+                    taxableAmount: totals.taxable,
+                    gstAmount: totals.gst,
+                    grandTotal: totals.grandTotal,
+                    status: 'Saved Cloud',
+                    items: []
+                }
+            };
+
+            const collectItems = (tableId, type) => {
+                const section = document.getElementById(tableId);
+                if (!section || section.style.display === 'none') return;
+                section.querySelectorAll('tbody tr').forEach(tr => {
+                    payload.payload.items.push({
+                        type: type,
+                        description: tr.querySelectorAll('input')[0]?.value || '',
+                        hsn: tr.querySelectorAll('input')[1]?.value || '',
+                        qty: tr.querySelectorAll('input')[2]?.value || 0,
+                        unitPrice: tr.querySelectorAll('input')[3]?.value || 0,
+                        total: (tr.querySelectorAll('input')[2]?.value || 0) * (tr.querySelectorAll('input')[3]?.value || 0)
+                    });
+                });
+            };
+
+            collectItems('section-table-1', 'Vehicle');
+            collectItems('section-table-2', 'Spare Part');
+            collectItems('section-table-3', 'Labour/Service');
+
+            if (appState.webAppUrl) {
+                try {
+                    logConsole(`Sending quotation ${qNo} to Google Sheets...`);
+                    const res = await callGasBackend(payload);
+                    alert(res.message);
+                    if (res.success) {
+                        appState.quotations.push({
+                            qNo: payload.payload.quotationNo,
+                            type: payload.payload.type,
+                            customer: payload.payload.customerName,
+                            date: payload.payload.date,
+                            taxable: payload.payload.taxableAmount,
+                            grandTotal: payload.payload.grandTotal,
+                            status: 'Saved Cloud'
+                        });
+                        renderMasterTables();
+                        switchTab('dashboard');
+                    }
+                } catch (err) {
+                    alert("Cloud Save Error: " + err.message + "\nSaving to local state.");
+                    saveLocally(payload.payload);
+                }
+            } else {
+                saveLocally(payload.payload);
+            }
+        }
+
+        function saveLocally(payload) {
+            appState.quotations.push({
+                qNo: payload.quotationNo,
+                type: payload.type,
+                customer: payload.customerName,
+                date: payload.date,
+                taxable: payload.taxableAmount,
+                grandTotal: payload.grandTotal,
+                status: 'Saved Local'
+            });
+            alert('Quotation saved to local browser state!');
+            renderMasterTables();
+            switchTab('dashboard');
+        }
+    </script>
+</body>
+</html>
+
